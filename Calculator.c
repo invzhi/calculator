@@ -41,7 +41,7 @@ int main()
 		do {
 			again = false;
 			free(str);
-			str = getExpression()
+			str = getExpression();
 			expressionInit();
 			commandCheck();
 		} while(again);
@@ -300,6 +300,7 @@ double mathFunction(char* leftBracket, double num) {
 		} else if(strncmp(leftBracket - 6, "arctan", 6) == 0) {
 			mathFunctionLength = 6;
 			num = atan(num);
+		}
 	} else if(leftBracket > str + 4 && strncmp(leftBracket - 5, "floor", 5) == 0) {
 		mathFunctionLength = 5;
 		num = floor(num);
@@ -322,6 +323,7 @@ double mathFunction(char* leftBracket, double num) {
 		} else if(strncmp(leftBracket - 3, "tan", 3) == 0) {
 			mathFunctionLength = 3;
 			num = tan(num);
+		}
 	} else if(strncmp(leftBracket - 2, "ln", 2) == 0) {
 		mathFunctionLength = 2;
 		if(num > 0)
