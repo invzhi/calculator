@@ -134,7 +134,7 @@ void expressionInit() {
 		error(OVERMUCH, '(');
 		return;
 	}
-	while(left = strstr(str, "()" ))
+	if(left = strstr(str, "()" ))
 		error(NO_NUMBER, ')');
 	while(left = strstr(str, "pi" ))
 		replace(left, acos(-1.0), left + 2);
@@ -196,7 +196,7 @@ void error(int n, char c) {
 			printf("[Error]: too many '%c'\n\n", c);
 			break;
 		case NO_NUMBER:
-			printf("[Error]: no number before '%c'\n\n", c);
+			printf("[Error]: no number around '%c'\n\n", c);
 			break;
 		case NOT_DECLARED:
 			printf("[Error]: something was not declared around '%c'\n\n", c);
@@ -236,11 +236,20 @@ double calculate(char* s) {
 		}
 		double num1 = strtod(lastNumber, &endptr1), 
 			   num2 = strtod(power  + 1, &endptr2);
+		if(lastNumber == power || power + 1 == endptr2) {
+			error(NO_NUMBER, '^');
+			return 0;
+		}
 		if(*endptr1 != '^' || *endptr2 != '\0' && !isOperator(*endptr2)) {
 			error(NOT_DECLARED, '^');
 			return 0;
 		}
-		replace(lastNumber, pow(num1, num2), endptr2);
+		char* right = (char*)malloc(strlen(endptr2) + 1);
+		if(right == NULL)
+			error(MALLOC_ERROR, 0);
+		strcpy(right, endptr2);
+		sprintf(lastNumber, "%lf%s", pow(num1, num2), right);
+		free(right);
 	}
 	cache = strtod(s_, &endptr1);
 	while(*endptr1) {
@@ -272,9 +281,6 @@ double calculate(char* s) {
 				result += cache;
 				cache = next * -1;
 				break;
-			default:
-				error(*endptr1 == *(endptr1 - 1) ? OVERMUCH : NOT_DECLARED, *endptr1);
-				return 0;
 		}
 		endptr1 = endptr2;
 	}
