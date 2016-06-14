@@ -1,67 +1,80 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <math.h>
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #define bool  char
 #define true  1
 #define false 0
 
-enum errorType {
-	OVERMUCH,
-	NO_NUMBER,
-	NOT_DECLARED,
-	MALLOC_ERROR,
-	ARC_OUT_OF_BOUNDS,
-	LN_OUT_OF_BOUNDS,
-};
+#define DEBUG
 
-void   interfaceInit();
-void   expressionInit();
-void   commandCheck();
-char*  getExpression();
-bool   isOperator(char c);
-void   error(int n, char c);
-void   replace(char* a, double num, const char* b);
-double calculate(char* s);
-double mathFunction(char* leftBracket, double num);
+typedef enum {
+	DIGIT,
+	OPERATOR,
+	FUNCTION,
+	LEFT_PARENTHESIS,
+	RIGHT_PARENTHESIS,
+	UNKNOWN,
+} charType;
 
-bool   again;
-int    mathFunctionLength;
-char*  str = NULL;
+typedef enum {
+	ARCSIN = 'A',
+	ARCCOS,
+	ARCTAN,
+	FLOOR,
+	CEIL,
+	ABS,
+	EXP,
+	SIN,
+	COS,
+	TAN,
+	LN,
+	FUNCTION_END,
+} function;
+
+inline bool isOperator(char c);
+inline bool isFunction(char c);
+charType getType(char* c, bool sign);
+unsigned int getPriority(char c);
+void interfaceInit();
+bool inputInit(char* s);
+void functionInit(char* s);
+bool commandCheck(char* s);
+void replaceNumber(char* a, double insert, const char* b);
+void replaceFuntion(char* s, function c, int functionLength);
+bool calculate(char* s, double* result);
+char* getInfixNotation();
+char* shuntingYardAlgorithm(const char *input);
+
 double Ans = 0;
 
-int main()
-{
+int main() {
 	interfaceInit();
-	while(true) {
-		char  *leftBracket, *rightBracket;
-		double result;
-		do {
-			again = false;
-			free(str);
-			str = getExpression();
-			expressionInit();
-			commandCheck();
-		} while(again);
-		while(rightBracket = strchr(str, ')')) {
-			mathFunctionLength = 0;
-			*rightBracket = '\0';
-			leftBracket = strrchr(str,'(');
-			result = calculate(leftBracket + 1);
-			if(!again && leftBracket > str + 1 && islower(*(leftBracket - 1)))
-				result = mathFunction(leftBracket, result);
-			if(again)
-				break;
-			replace(leftBracket - mathFunctionLength, result, rightBracket + 1);
+	double result;
+	char *input = NULL, *reversePolishNotation = NULL;
+	while(strcmp(input = getInfixNotation(), "quit") != 0) {
+		#ifdef DEBUG
+		printf("input:%s\n", input);
+		#endif
+		if(!commandCheck(input) && (reversePolishNotation = shuntingYardAlgorithm(input))) {
+			#ifdef DEBUG
+			printf("reversePolishNotation:%s\n", reversePolishNotation + 1);
+			#endif
+			if(calculate(reversePolishNotation, &result))
+				printf("= %g\n\n", Ans = result);
 		}
-		if(again)
-			continue;
-		result = calculate(str);
-		if(!again)
-			printf("= %g\n\n", Ans = result);
+		free(input);
 	}
+	return EXIT_SUCCESS;
+}
+
+inline bool isOperator(char c) {
+	return (c == '^' || c == '*' || c == '/' || c == '%' || c == '+' || c == '-');
+}
+
+inline bool isFunction(char c) {
+	return (c >= 'A' && c < FUNCTION_END);
 }
 
 void interfaceInit() {
@@ -71,22 +84,75 @@ void interfaceInit() {
 	puts  ("Or you can enter \"help\" to know more.\n");
 }
 
-void commandCheck()	{
-	if(strcmp(str, "quit") == 0)
-		exit(EXIT_SUCCESS);
-	else if(strcmp(str, "cls") == 0) {
-		again = true;
+char* getInfixNotation() {
+	unsigned int size = 100u, blockSize = 50u;
+	char* buffer = (char*)malloc(size * sizeof(char));
+	char c = EOF;
+	int  n = 0;
+	while(buffer != NULL && (c = getchar()) != EOF && c != '\n') {
+		if(isspace(c))
+			continue;
+		if(isupper(c))
+			c = tolower(c);
+		buffer[n++] = c;
+		if(n == size) {
+			size += blockSize;
+			buffer = (char*)realloc(buffer, size * sizeof(char));
+		}
+	}
+	if(buffer == NULL || n == 0) {
+		free(buffer);
+		buffer = getInfixNotation();
+	} else {
+		buffer[n] = '\0';
+		buffer = realloc(buffer, (strlen(buffer) + 100) * sizeof(char));
+		if(!inputInit(buffer)) {
+			free(buffer);
+			buffer = getInfixNotation();
+		}
+	}
+	return buffer;
+}
+
+bool inputInit(char* s) {
+	char* ptr = s;
+	/*17*/
+	if(ptr = strstr(s, "()" )) {
+		puts("[Error]: empty between '(' and ')'\n");
+		return false;
+	}
+	while(ptr = strstr(s, "pi"))
+		replaceNumber(ptr, acos(-1.0), ptr + 2);
+	while(ptr = strstr(s, "ans"))
+		replaceNumber(ptr, Ans, ptr + 3);
+	functionInit(s);
+	return true;
+}
+
+void replaceNumber(char* a, double insert, const char* b) {
+	char* b_ = (char*)malloc((strlen(b) + 1) * sizeof(char));
+	if(b_ == NULL)
+		;
+	strcpy(b_, b);
+	sprintf(a, "%lf%s", insert, b_);
+	free(b_);
+}
+
+bool commandCheck(char* s)	{
+	bool result = false;
+	if(strcmp(s, "cls") == 0) {
+		result = true;
 		system("cls");
 		printf("Please enter the expression or command with English characters:\t\t");
 		puts  ("Or you can enter \"help\" to know more.\n");
-	} else if(strcmp(str, "color") == 0) {
-		again = true;
+	} else if(strcmp(s, "color") == 0) {
+		result = true;
 		static bool color = 0; /*Black->1 White->0*/
 		color = !color;
 		printf("\n");
 		system(color ? "color 0F" : "color F0");
-	} else if(strcmp(str, "help") == 0) {
-		again = true;
+	} else if(strcmp(s, "help") == 0) {
+		result = true;
 		puts("\n============================= HELP =============================");
 		puts("|                                                              |");
 		puts("|-------------------------- Commands --------------------------|");
@@ -113,230 +179,291 @@ void commandCheck()	{
 		puts("================================================================");
 		puts("\nPlease enter the expression or command with English characters:\n");
 	}
+	return result;
 }
 
-void expressionInit() {
-	char* left;
-	int n, bracket;
-	n = bracket = 0;
-	do {
-		if(str[n] == '(')
-			bracket++;
-		else if(str[n] == ')') {
-			if(bracket == 0) {
-				error(OVERMUCH, ')');
-				return;
-			} else
-				bracket--;
-		}
-	} while(str[n++]);
-	if(bracket) {
-		error(OVERMUCH, '(');
-		return;
+unsigned int getPriority(char c) {
+	unsigned int priority;
+	switch(c) {
+		case '^':
+			priority = 3u;
+			break;
+		case '*':
+		case '/':
+		case '%':
+			priority = 2u;
+			break;
+		case '+':
+		case '-':
+			priority = 1u;
+			break;
 	}
-	if(left = strstr(str, "()" ))
-		error(NO_NUMBER, ')');
-	while(left = strstr(str, "pi" ))
-		replace(left, acos(-1.0), left + 2);
-	while(left = strstr(str, "ans"))
-		replace(left, Ans, left + 3);
+	return priority;
 }
 
-char* getExpression() {
-	unsigned int size = 100u, blockSize = 50u;
-	char* buffer = (char*)malloc(size);
-	char c = EOF;
-	int  n = 0;
-	while(buffer != NULL && (c = getchar()) != EOF && c != '\n') {
-		if(isspace(c))
-			continue;
-		if(isupper(c))
-			c = tolower(c);
-		buffer[n++] = c;
+charType getType(char* s, bool sign) {
+	charType result;
+	char *ptr, ch = *s;
+	strtod(s, &ptr);
+	if(ptr > s && !sign)
+		result = DIGIT;
+	else if(isOperator(ch))
+		result = OPERATOR;
+	else if(isFunction(ch))
+		result = FUNCTION;
+	else if(ch == '(')
+		result = LEFT_PARENTHESIS;
+	else if(ch == ')')
+		result = RIGHT_PARENTHESIS;
+	else
+		result = UNKNOWN;
+	return result;
+}
+
+void functionInit(char* s) {
+	char* ptr;
+	while(ptr = strstr(s, "arcsin"))
+		replaceFuntion(ptr, ARCSIN, 6);
+	while(ptr = strstr(s, "arccos"))
+		replaceFuntion(ptr, ARCCOS, 6);
+	while(ptr = strstr(s, "arctan"))
+		replaceFuntion(ptr, ARCTAN, 6);
+	while(ptr = strstr(s, "floor"))
+		replaceFuntion(ptr, FLOOR, 5);
+	while(ptr = strstr(s, "ceil"))
+		replaceFuntion(ptr, CEIL, 4);
+	while(ptr = strstr(s, "abs"))
+		replaceFuntion(ptr, ABS, 3);
+	while(ptr = strstr(s, "exp"))
+		replaceFuntion(ptr, EXP, 3);
+	while(ptr = strstr(s, "sin"))
+		replaceFuntion(ptr, SIN, 3);
+	while(ptr = strstr(s, "cos"))
+		replaceFuntion(ptr, COS, 3);
+	while(ptr = strstr(s, "tan"))
+		replaceFuntion(ptr, TAN, 3);
+	while(ptr = strstr(s, "ln"))
+		replaceFuntion(ptr, LN, 2);
+}
+
+void replaceFuntion(char* s, function c, int functionLength) {
+	char* ptr = s;
+	char  ch;
+	*ptr++ = c;
+	while(ch = *(ptr + functionLength - 1))
+		*ptr++ = ch;
+	*ptr = ch;
+}
+
+char* shuntingYardAlgorithm(const char *input) {
+	unsigned int outputSize = 100u, stackSize = 50u, blockSize = 50u;
+	unsigned int n1 = 0, n2 = 0;
+	char *stack  = (char*)malloc(stackSize * sizeof(char)),
+		 *output = (char*)malloc(outputSize * sizeof(char)); 
+	const char *inptr = input;
+	bool digitSign = false;
+	char inChar, ch;
+	output[n1++] = ' ';
+	while(inChar = *inptr) {
+		if(n2 == stackSize) {
+			stackSize += blockSize;
+			stack = (char*)realloc(stack, stackSize * sizeof(char));
+		}
+		if(n1 > outputSize - 20) {
+			outputSize += blockSize;
+			output = (char*)realloc(output, outputSize * sizeof(char));
+		}
+		char* ptr;
+		bool match = false;
+		switch(getType(inptr, digitSign)) {
+			case DIGIT:
+				digitSign = true;
+				strtod(inptr, &ptr);
+				while(inptr < ptr)
+					output[n1++] = *inptr++;
+				output[n1++] = ' ';
+				break;
+			case OPERATOR:
+				digitSign = false;
+				while(n2 > 0) {
+					ch = stack[n2 - 1];
+					if(isOperator(ch) && getPriority(ch) >= getPriority(inChar)) {
+						output[n1++] = ch;
+						output[n1++] = ' ';
+						n2--;
+					} else
+						break;
+				}
+				stack[n2++] = *inptr++;
+				break;
+			case FUNCTION:
+			case LEFT_PARENTHESIS:
+				digitSign = false;
+				stack[n2++] = inChar;
+				inptr++;
+				break;
+			case RIGHT_PARENTHESIS:
+				digitSign = false;
+				while(n2 > 0) {
+					ch = stack[--n2];
+					if(ch == '(') {
+						match = true;
+						break;
+					} else {
+						output[n1++] = ch;
+						output[n1++] = ' ';
+					}
+				}
+				if(!match) {
+					puts("[Error]: parentheses mismatched\n");
+					free(stack);
+					free(output);
+					return NULL;
+				}
+				if(n2 > 0) {
+					ch = stack[n2 - 1];
+					if(isFunction(ch)) {
+						output[n1++] = ch;
+						output[n1++] = ' ';
+						n2--;
+					}
+				}
+				inptr++;
+				break;
+			case UNKNOWN:
+				printf("[Error]: Unknown token '%c'\n\n", inChar);
+				free(stack);
+				free(output);
+				return NULL;
+		}
+	}
+	while(n2 > 0) {
+		ch = stack[--n2];
+		if(ch == '(' || ch == ')') {
+			puts("[Error]: parentheses mismatched\n");
+			return NULL;
+		}
+		output[n1++] = ch;
+		output[n1++] = ' ';
+	}
+	free(stack);
+	output[n1 - 1] = '\0';
+	output = realloc(output, (strlen(output) + 1) * sizeof(char));
+	return output;
+}
+
+bool calculate(char* s, double* result) {
+	unsigned int size = 50u, blockSize = 25u;
+	unsigned int n = 0;
+	double* number = (double*)malloc(size * sizeof(double));
+	char* space = s;
+	char buffer[20];
+	while(space = strchr(space, ' ')) {
 		if(n == size) {
 			size += blockSize;
-			buffer = (char*)realloc(buffer, size);
+			number = (double*)realloc(number, size * sizeof(double));
+		}
+		space++;
+		sscanf(space, "%s", buffer);
+		switch(getType(buffer, false)) {
+			case DIGIT:
+				number[n++] = atof(buffer);
+				break;
+			case OPERATOR:
+				if(n < 2) {
+					printf("[Error]: too many '%c'\n\n");
+					return false;
+				}
+				switch(*buffer) {
+					case '^':
+						number[n - 2] = pow(number[n - 2], number[n - 1]);
+						break;
+					case '*':
+						number[n - 2] *= number[n - 1];
+						break;
+					case '/':
+						if(number[n - 1] == 0) {
+							puts("[Error]: division by zero\n");
+							return false;
+						}
+						number[n - 2] /= number[n - 1];
+						break;
+					case '%':
+						if(number[n - 1] != 0)
+							number[n - 2] = fmod(number[n - 2], number[n - 1]);
+						break;
+					case '+':
+						number[n - 2] += number[n - 1];
+						break;
+					case '-':
+						number[n - 2] -= number[n - 1];
+						break;
+				}
+				n--;
+				break;
+			case FUNCTION:
+				switch(*buffer) {
+					case ARCSIN:
+						if(number[n - 1] >= -1 && number[n - 1] <= 1)
+							number[n - 1] = asin(number[n - 1]);
+						else {
+							puts("[Error]: x out of (-1 <= x <= 1) in arcsin(x)\n");
+							return false;
+						}
+						break;
+					case ARCCOS:
+						if(number[n - 1] >= -1 && number[n - 1] <= 1)
+							number[n - 1] = acos(number[n - 1]);
+						else {
+							puts("[Error]: x out of (-1 <= x <= 1) in arccos(x)\n");
+							return false;
+						}
+						break;
+					case ARCTAN:
+						number[n - 1] = atan(number[n - 1]);
+						break;
+					case FLOOR:
+						number[n - 1] = floor(number[n - 1]);
+						break;
+					case CEIL:
+						number[n - 1] = ceil(number[n - 1]);
+						break;
+					case ABS:
+						number[n - 1] = fabs(number[n - 1]);
+						break;
+					case EXP:
+						number[n - 1] = exp(number[n - 1]);
+						break;
+					case SIN:
+						number[n - 1] = sin(number[n - 1]);
+						break;
+					case COS:
+						number[n - 1] = cos(number[n - 1]);
+						break;
+					case TAN:
+						number[n - 1] = tan(number[n - 1]);
+						break;
+					case LN:
+						if(number[n - 1] > 0)
+							number[n - 1] = log(number[n - 1]);
+						else {
+							puts("[Error]: x out of (x > 0) in ln(x)\n");
+							return false;
+						}
+						break;
+				}
+				break;
 		}
 	}
-	if(buffer == NULL)
-		error(MALLOC_ERROR, 0);
-	else if(n == 0) {
-		free(buffer);
-		buffer = getExpression();
-	} else
-		buffer[n] = '\0';
-	return buffer;
-}
-
-bool isOperator(char c) {
-	bool result = false;
-	if(c == '^' || c == '*' || c == '/' || c == '%' || c == '+' || c == '-')
-		result = true;
-	return result;
-}
-
-void replace(char* a, double num, const char* b) {
-	bool left = false, right = false;
-	if(a > str && !isOperator(*(a-1)) && *(a-1) != '(')
-		left  = true;
-	if(*b != '\0' && !isOperator(*b) && *b != ')')
-		right = true;
-	char* b_ = (char*)malloc(strlen(b) + 1);
-	if(b_ == NULL)
-		error(MALLOC_ERROR, 0);
-	strcpy(b_, b);
-	sprintf(a, "%s%lf%s%s", left ? "*" : "", num, right ? "*" : "", b_);
-	free(b_);
-}
-
-void error(int n, char c) {
-	again = true;
-	switch(n) {
-		case OVERMUCH:
-			printf("[Error]: too many '%c'\n\n", c);
-			break;
-		case NO_NUMBER:
-			printf("[Error]: no number around '%c'\n\n", c);
-			break;
-		case NOT_DECLARED:
-			printf("[Error]: something was not declared around '%c'\n\n", c);
-			break;
-		case MALLOC_ERROR:
-			printf("[Error]: application memory failed\n\n");
-			assert(0);
-			break;
-		case ARC_OUT_OF_BOUNDS:
-			printf("[Error]: x<-1 or x>1  in arcsin(x) or arccos(x)\n\n");
-			break;
-		case LN_OUT_OF_BOUNDS:
-			printf("[Error]: x<0  in ln(x)\n\n");
-			break;
+	free(s);
+	bool ret;
+	if(n == 1) {
+		*result = *number;
+		ret = true;
+	} else {
+		puts("[Error]: lose operator\n");
+		ret = false;
 	}
-}
-
-double calculate(char* s) {
-	char  *power, *endptr1, *endptr2;
-	double cache, result = 0;
-	char* s_ = (char*)malloc(strlen(s) + 100);
-	if(s_ == NULL)
-		error(MALLOC_ERROR, 0);
-	strcpy(s_, s);
-	while(power = strchr(s_, '^')) { /*Exponent ^ */
-		if(power == s_) {
-			error(NO_NUMBER, '^');
-			return 0;
-		}
-		char* lastNumber = power;
-		while(lastNumber > s_) {
-			lastNumber--;
-			if(isOperator(*lastNumber)) {
-				lastNumber++;
-				break;
-			}
-		}
-		double num1 = strtod(lastNumber, &endptr1), 
-			   num2 = strtod(power  + 1, &endptr2);
-		if(lastNumber == power || power + 1 == endptr2) {
-			error(NO_NUMBER, '^');
-			return 0;
-		}
-		if(*endptr1 != '^' || *endptr2 != '\0' && !isOperator(*endptr2)) {
-			error(NOT_DECLARED, '^');
-			return 0;
-		}
-		char* right = (char*)malloc(strlen(endptr2) + 1);
-		if(right == NULL)
-			error(MALLOC_ERROR, 0);
-		strcpy(right, endptr2);
-		sprintf(lastNumber, "%lf%s", pow(num1, num2), right);
-		free(right);
-	}
-	cache = strtod(s_, &endptr1);
-	while(*endptr1) {
-		if(s_ == endptr1) {
-			error(isOperator(*s_) ? NO_NUMBER : NOT_DECLARED, *s_);
-			return 0;
-		}
-		double next = strtod(endptr1 + 1, &endptr2);
-		if(endptr1 + 1 == endptr2) {
-			error(*endptr1 == *endptr2 ? OVERMUCH : NOT_DECLARED, *endptr1);
-			return 0;
-		}
-		switch(*endptr1) {
-			case '*':/*Multiplication * */
-				cache *= next;
-				break;
-			case '/':/*Division       / */
-				cache /= next;
-				break;
-			case '%':/*Modulus        % */
-				if(next != 0)
-					cache = fmod(cache, next);
-				break;
-			case '+':/*Addition       + */
-				result += cache;
-				cache = next;
-				break;
-			case '-':/*Subtraction    - */
-				result += cache;
-				cache = next * -1;
-				break;
-		}
-		endptr1 = endptr2;
-	}
-	result += cache;
-	free(s_);
-	return result;
-}
-
-double mathFunction(char* leftBracket, double num) {
-	if(leftBracket > str + 5) {
-		if(strncmp(leftBracket - 6, "arcsin", 6) == 0) {
-			mathFunctionLength = 6;
-			if(num >= -1 && num <= 1)
-				num = asin(num);
-			else
-				error(ARC_OUT_OF_BOUNDS, 0);
-		} else if(strncmp(leftBracket - 6, "arccos", 6) == 0) {
-			mathFunctionLength = 6;
-			if(num >= -1 && num <= 1)
-				num = acos(num);
-			else
-				error(ARC_OUT_OF_BOUNDS, 0);
-		} else if(strncmp(leftBracket - 6, "arctan", 6) == 0) {
-			mathFunctionLength = 6;
-			num = atan(num);
-		}
-	} else if(leftBracket > str + 4 && strncmp(leftBracket - 5, "floor", 5) == 0) {
-		mathFunctionLength = 5;
-		num = floor(num);
-	} else if(leftBracket > str + 3 && strncmp(leftBracket - 4, "ceil", 4) == 0) {
-		mathFunctionLength = 4;
-		num = ceil(num);
-	} else if(leftBracket > str + 2) {	
-		if(strncmp(leftBracket - 3, "abs", 3) == 0) {
-			mathFunctionLength = 3;
-			num = fabs(num);
-		} else if(strncmp(leftBracket - 3, "exp", 3) == 0) {
-			mathFunctionLength = 3;
-			num = exp(num);
-		} else if(strncmp(leftBracket - 3, "sin", 3) == 0) {
-			mathFunctionLength = 3;
-			num = sin(num);
-		} else if(strncmp(leftBracket - 3, "cos", 3) == 0) {
-			mathFunctionLength = 3;
-			num = cos(num);
-		} else if(strncmp(leftBracket - 3, "tan", 3) == 0) {
-			mathFunctionLength = 3;
-			num = tan(num);
-		}
-	} else if(strncmp(leftBracket - 2, "ln", 2) == 0) {
-		mathFunctionLength = 2;
-		if(num > 0)
-			num = log(num);
-		else
-			error(LN_OUT_OF_BOUNDS, 0);
-	} else
-		error(NOT_DECLARED, *(leftBracket - 1));
-	return num;
+	free(number);
+	return ret;
 }
