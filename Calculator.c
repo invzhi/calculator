@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <math.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #define bool  char
@@ -33,16 +34,17 @@ typedef enum {
 	FUNCTION_END,
 } function;
 
+inline bool isInput(char c);
 inline bool isOperator(char c);
 inline bool isFunction(char c);
 charType getType(char* c, bool sign);
 unsigned int getPriority(char c);
 void interfaceInit();
 bool inputInit(char* s);
-void functionInit(char* s);
+bool functionInit(char* s);
 bool commandCheck(char* s);
 void replaceNumber(char* a, double insert, const char* b);
-void replaceFuntion(char* s, function c, int functionLength);
+bool replaceFuntion(char* s, function c, int functionLength);
 bool calculate(char* s, double* result);
 char* getInfixNotation();
 char* shuntingYardAlgorithm(const char *input);
@@ -66,7 +68,12 @@ int main() {
 		}
 		free(input);
 	}
+	free(input);
 	return EXIT_SUCCESS;
+}
+
+inline bool isInput(char c) {
+	return (c >= ' ' || c <= '~');
 }
 
 inline bool isOperator(char c) {
@@ -92,6 +99,12 @@ char* getInfixNotation() {
 	while(buffer != NULL && (c = getchar()) != EOF && c != '\n') {
 		if(isspace(c))
 			continue;
+		if(!isInput(c)) {
+			puts("you can only enter characters with English\n");
+			free(buffer);
+			fflush(stdin);
+			return getInfixNotation();
+		}
 		if(isupper(c))
 			c = tolower(c);
 		buffer[n++] = c;
@@ -105,7 +118,7 @@ char* getInfixNotation() {
 		buffer = getInfixNotation();
 	} else {
 		buffer[n] = '\0';
-		buffer = realloc(buffer, (strlen(buffer) + 100) * sizeof(char));
+		buffer = (char*)realloc(buffer, (strlen(buffer) + 100) * sizeof(char));
 		if(!inputInit(buffer)) {
 			free(buffer);
 			buffer = getInfixNotation();
@@ -116,7 +129,6 @@ char* getInfixNotation() {
 
 bool inputInit(char* s) {
 	char* ptr = s;
-	/*17*/
 	if(ptr = strstr(s, "()" )) {
 		puts("[Error]: empty between '(' and ')'\n");
 		return false;
@@ -125,14 +137,16 @@ bool inputInit(char* s) {
 		replaceNumber(ptr, acos(-1.0), ptr + 2);
 	while(ptr = strstr(s, "ans"))
 		replaceNumber(ptr, Ans, ptr + 3);
-	functionInit(s);
-	return true;
+	if(functionInit(s))
+		return true;
+	else
+		return false;
 }
 
 void replaceNumber(char* a, double insert, const char* b) {
 	char* b_ = (char*)malloc((strlen(b) + 1) * sizeof(char));
 	if(b_ == NULL)
-		;
+		assert(0);
 	strcpy(b_, b);
 	sprintf(a, "%lf%s", insert, b_);
 	free(b_);
@@ -220,46 +234,67 @@ charType getType(char* s, bool sign) {
 	return result;
 }
 
-void functionInit(char* s) {
+bool functionInit(char* s) {
 	char* ptr;
 	while(ptr = strstr(s, "arcsin"))
-		replaceFuntion(ptr, ARCSIN, 6);
+		if(!replaceFuntion(ptr, ARCSIN, 6))
+			return false;
 	while(ptr = strstr(s, "arccos"))
-		replaceFuntion(ptr, ARCCOS, 6);
+		if(!replaceFuntion(ptr, ARCCOS, 6))
+			return false;
 	while(ptr = strstr(s, "arctan"))
-		replaceFuntion(ptr, ARCTAN, 6);
+		if(!replaceFuntion(ptr, ARCTAN, 6))
+			return false;
 	while(ptr = strstr(s, "floor"))
-		replaceFuntion(ptr, FLOOR, 5);
+		if(!replaceFuntion(ptr, FLOOR, 5))
+			return false;
 	while(ptr = strstr(s, "ceil"))
-		replaceFuntion(ptr, CEIL, 4);
+		if(!replaceFuntion(ptr, CEIL, 4))
+			return false;
 	while(ptr = strstr(s, "abs"))
-		replaceFuntion(ptr, ABS, 3);
+		if(!replaceFuntion(ptr, ABS, 3))
+			return false;
 	while(ptr = strstr(s, "exp"))
-		replaceFuntion(ptr, EXP, 3);
+		if(!replaceFuntion(ptr, EXP, 3))
+			return false;
 	while(ptr = strstr(s, "sin"))
-		replaceFuntion(ptr, SIN, 3);
+		if(!replaceFuntion(ptr, SIN, 3))
+			return false;
 	while(ptr = strstr(s, "cos"))
-		replaceFuntion(ptr, COS, 3);
+		if(!replaceFuntion(ptr, COS, 3))
+			return false;
 	while(ptr = strstr(s, "tan"))
-		replaceFuntion(ptr, TAN, 3);
+		if(!replaceFuntion(ptr, TAN, 3))
+			return false;
 	while(ptr = strstr(s, "ln"))
-		replaceFuntion(ptr, LN, 2);
+		if(!replaceFuntion(ptr, LN, 2))
+			return false;
+	return true;
 }
 
-void replaceFuntion(char* s, function c, int functionLength) {
-	char* ptr = s;
+bool replaceFuntion(char* s, function c, int functionLength) {
+	bool ret;
 	char  ch;
-	*ptr++ = c;
-	while(ch = *(ptr + functionLength - 1))
-		*ptr++ = ch;
-	*ptr = ch;
+	if(*(s + functionLength) == '(') {
+		*s++ = c;
+		while(ch = *(s + functionLength - 1))
+			*s++ = ch;
+		*s = ch;
+		ret = true;
+	} else {
+		printf("[Error]: no '(' after function \"%.*s\"\n\n", functionLength, s);
+		ret = false;
+	}
+	return ret;
 }
 
 char* shuntingYardAlgorithm(const char *input) {
 	unsigned int outputSize = 100u, stackSize = 50u, blockSize = 50u;
-	unsigned int n1 = 0, n2 = 0;
+	unsigned int n1 = 0, n2 = 0, overNumber = 0;
 	char *stack  = (char*)malloc(stackSize * sizeof(char)),
-		 *output = (char*)malloc(outputSize * sizeof(char)); 
+		 *output = (char*)malloc(outputSize * sizeof(char));
+	if(stack == NULL || output == NULL)
+		assert(0);
 	const char *inptr = input;
 	bool digitSign = false;
 	char inChar, ch;
@@ -268,10 +303,14 @@ char* shuntingYardAlgorithm(const char *input) {
 		if(n2 == stackSize) {
 			stackSize += blockSize;
 			stack = (char*)realloc(stack, stackSize * sizeof(char));
+			if(stack == NULL)
+				assert(0);
 		}
 		if(n1 > outputSize - 20) {
 			outputSize += blockSize;
 			output = (char*)realloc(output, outputSize * sizeof(char));
+			if(output == NULL)
+				assert(0);
 		}
 		char* ptr;
 		bool match = false;
@@ -279,6 +318,8 @@ char* shuntingYardAlgorithm(const char *input) {
 			case DIGIT:
 				digitSign = true;
 				strtod(inptr, &ptr);
+				if(ptr - inptr > 8)
+					overNumber++;
 				while(inptr < ptr)
 					output[n1++] = *inptr++;
 				output[n1++] = ' ';
@@ -298,7 +339,7 @@ char* shuntingYardAlgorithm(const char *input) {
 				break;
 			case FUNCTION:
 			case LEFT_PARENTHESIS:
-				digitSign = false;
+				digitSign = true;
 				stack[n2++] = inChar;
 				inptr++;
 				break;
@@ -349,6 +390,7 @@ char* shuntingYardAlgorithm(const char *input) {
 	free(stack);
 	output[n1 - 1] = '\0';
 	output = realloc(output, (strlen(output) + 1) * sizeof(char));
+	if(overNumber)
 	return output;
 }
 
@@ -356,12 +398,16 @@ bool calculate(char* s, double* result) {
 	unsigned int size = 50u, blockSize = 25u;
 	unsigned int n = 0;
 	double* number = (double*)malloc(size * sizeof(double));
+	if(number == NULL)
+		assert(0);
 	char* space = s;
 	char buffer[20];
 	while(space = strchr(space, ' ')) {
 		if(n == size) {
 			size += blockSize;
 			number = (double*)realloc(number, size * sizeof(double));
+			if(number == NULL)
+				assert(0);
 		}
 		space++;
 		sscanf(space, "%s", buffer);
@@ -371,7 +417,7 @@ bool calculate(char* s, double* result) {
 				break;
 			case OPERATOR:
 				if(n < 2) {
-					printf("[Error]: too many '%c'\n\n");
+					printf("[Error]: overmuch '%c'\n\n", *buffer);
 					return false;
 				}
 				switch(*buffer) {
@@ -456,14 +502,11 @@ bool calculate(char* s, double* result) {
 		}
 	}
 	free(s);
-	bool ret;
-	if(n == 1) {
-		*result = *number;
-		ret = true;
-	} else {
-		puts("[Error]: lose operator\n");
-		ret = false;
+	while(n > 1) {
+		number[n - 2] *= number[n - 1];
+		n--;
 	}
+	*result = *number;
 	free(number);
-	return ret;
+	return true;
 }
