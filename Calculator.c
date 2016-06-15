@@ -339,12 +339,12 @@ char* shuntingYardAlgorithm(const char *input) {
 				break;
 			case FUNCTION:
 			case LEFT_PARENTHESIS:
-				digitSign = true;
+				digitSign = false;
 				stack[n2++] = inChar;
 				inptr++;
 				break;
 			case RIGHT_PARENTHESIS:
-				digitSign = false;
+				digitSign = true;
 				while(n2 > 0) {
 					ch = stack[--n2];
 					if(ch == '(') {
@@ -391,6 +391,7 @@ char* shuntingYardAlgorithm(const char *input) {
 	output[n1 - 1] = '\0';
 	output = realloc(output, (strlen(output) + 1) * sizeof(char));
 	if(overNumber)
+		printf("[Warning]: you may have %d figure more than 8 significant digits\n", overNumber);
 	return output;
 }
 
