@@ -8,7 +8,7 @@
 #define true  1
 #define false 0
 
-#define DEBUG
+/*#define DEBUG*/
 
 typedef enum {
 	DIGIT,
@@ -73,7 +73,7 @@ int main() {
 }
 
 inline bool isInput(char c) {
-	return (c >= ' ' || c <= '~');
+	return (c >= ' ' && c <= '~');
 }
 
 inline bool isOperator(char c) {
@@ -100,7 +100,7 @@ char* getInfixNotation() {
 		if(isspace(c))
 			continue;
 		if(!isInput(c)) {
-			puts("you can only enter characters with English\n");
+			puts("[Error]: you can only enter characters with English\n");
 			free(buffer);
 			fflush(stdin);
 			return getInfixNotation();
