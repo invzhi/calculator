@@ -4,11 +4,12 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+/*#define DEBUG*/
+
+/*increase boolean*/
 #define bool  char
 #define true  1
 #define false 0
-
-/*#define DEBUG*/
 
 typedef enum {
 	DIGIT,
@@ -19,6 +20,7 @@ typedef enum {
 	UNKNOWN,
 } charType;
 
+/*replace mathematical function in uppercase*/
 typedef enum {
 	ARCSIN = 'A',
 	ARCCOS,
@@ -34,20 +36,36 @@ typedef enum {
 	FUNCTION_END,
 } function;
 
+typedef struct {
+	double* stack;
+	unsigned int n;
+	unsigned int size;
+} Stack;
+
+/*stack*/
+void stackInit(Stack* s);
+void stackPush(Stack* s, double value);
+double stackPop(Stack* s);
+/*inline*/
 inline bool isInput(char c);
 inline bool isOperator(char c);
 inline bool isFunction(char c);
+/*user interface*/
+void interfaceInit(void);
+/*input infix notation*/
+char* getInfixNotation(void);
+bool inputInit(char* s);
+void replaceNumber(char* a, double insert, const char* b);
+/*Command line operation*/
+bool commandCheck(char* s);
+/*shunting yard algorithm*/
+bool functionInit(char* s);
+bool replaceFuntion(char* s, function c, int functionLength);
 charType getType(char* c, bool sign);
 unsigned int getPriority(char c);
-void interfaceInit();
-bool inputInit(char* s);
-bool functionInit(char* s);
-bool commandCheck(char* s);
-void replaceNumber(char* a, double insert, const char* b);
-bool replaceFuntion(char* s, function c, int functionLength);
-bool calculate(char* s, double* result);
-char* getInfixNotation();
 char* shuntingYardAlgorithm(const char *input);
+/*calculate reverse polish notation*/
+bool calculate(char* s, double* result);
 
 double Ans = 0;
 
@@ -84,14 +102,14 @@ inline bool isFunction(char c) {
 	return (c >= 'A' && c < FUNCTION_END);
 }
 
-void interfaceInit() {
+void interfaceInit(void) {
 	system("color F0");
 	system("title --------------------Welcome to use the calculator program--------------------");
 	printf("Please enter the expression or command with English characters:\t\t");
 	puts  ("Or you can enter \"help\" to know more.\n");
 }
 
-char* getInfixNotation() {
+char* getInfixNotation(void) {
 	unsigned int size = 100u, blockSize = 50u;
 	char* buffer = (char*)malloc(size * sizeof(char));
 	char c = EOF;
@@ -274,7 +292,7 @@ bool functionInit(char* s) {
 
 bool replaceFuntion(char* s, function c, int functionLength) {
 	bool ret;
-	char  ch;
+	char ch;
 	if(*(s + functionLength) == '(') {
 		*s++ = c;
 		while(ch = *(s + functionLength - 1))
@@ -292,7 +310,7 @@ char* shuntingYardAlgorithm(const char *input) {
 	unsigned int outputSize = 100u, stackSize = 50u, blockSize = 50u;
 	unsigned int n1 = 0, n2 = 0, overNumber = 0;
 	char *stack  = (char*)malloc(stackSize * sizeof(char)),
-		 *output = (char*)malloc(outputSize * sizeof(char));
+		*output = (char*)malloc(outputSize * sizeof(char));
 	if(stack == NULL || output == NULL)
 		assert(0);
 	const char *inptr = input;
@@ -396,118 +414,131 @@ char* shuntingYardAlgorithm(const char *input) {
 }
 
 bool calculate(char* s, double* result) {
-	unsigned int size = 50u, blockSize = 25u;
-	unsigned int n = 0;
-	double* number = (double*)malloc(size * sizeof(double));
-	if(number == NULL)
-		assert(0);
+	Stack stack;
+	stackInit(&stack);
+	double num;
 	char* space = s;
 	char buffer[20];
 	while(space = strchr(space, ' ')) {
-		if(n == size) {
-			size += blockSize;
-			number = (double*)realloc(number, size * sizeof(double));
-			if(number == NULL)
-				assert(0);
-		}
 		space++;
 		sscanf(space, "%s", buffer);
 		switch(getType(buffer, false)) {
 			case DIGIT:
-				number[n++] = atof(buffer);
+				stackPush(&stack, atof(buffer));
 				break;
 			case OPERATOR:
-				if(n < 2) {
+				if(stack.n < 2) {
 					printf("[Error]: overmuch '%c'\n\n", *buffer);
 					return false;
 				}
 				switch(*buffer) {
 					case '^':
-						number[n - 2] = pow(number[n - 2], number[n - 1]);
+						num = stackPop(&stack);
+						stackPush(&stack, pow(stackPop(&stack), num));
 						break;
 					case '*':
-						number[n - 2] *= number[n - 1];
+						stackPush(&stack, stackPop(&stack) * stackPop(&stack));
 						break;
 					case '/':
-						if(number[n - 1] == 0) {
+						if((num = stackPop(&stack)) == 0) {
 							puts("[Error]: division by zero\n");
 							return false;
 						}
-						number[n - 2] /= number[n - 1];
+						stackPush(&stack, stackPop(&stack) / num);
 						break;
 					case '%':
-						if(number[n - 1] != 0)
-							number[n - 2] = fmod(number[n - 2], number[n - 1]);
+						if((num = stackPop(&stack)) != 0)
+							stackPush(&stack, fmod(stackPop(&stack), num));
 						break;
 					case '+':
-						number[n - 2] += number[n - 1];
+						stackPush(&stack, stackPop(&stack) + stackPop(&stack));
 						break;
 					case '-':
-						number[n - 2] -= number[n - 1];
+						num = stackPop(&stack);
+						stackPush(&stack, stackPop(&stack) - num);
 						break;
 				}
-				n--;
 				break;
 			case FUNCTION:
+				num = stackPop(&stack);
 				switch(*buffer) {
 					case ARCSIN:
-						if(number[n - 1] >= -1 && number[n - 1] <= 1)
-							number[n - 1] = asin(number[n - 1]);
-						else {
+						if(num < -1 || num > 1) {
 							puts("[Error]: x out of (-1 <= x <= 1) in arcsin(x)\n");
 							return false;
 						}
+						stackPush(&stack, asin(num));
 						break;
 					case ARCCOS:
-						if(number[n - 1] >= -1 && number[n - 1] <= 1)
-							number[n - 1] = acos(number[n - 1]);
-						else {
+						if(num < -1 || num > 1) {
 							puts("[Error]: x out of (-1 <= x <= 1) in arccos(x)\n");
 							return false;
 						}
+						stackPush(&stack, acos(num));
 						break;
 					case ARCTAN:
-						number[n - 1] = atan(number[n - 1]);
+						stackPush(&stack, atan(num));
 						break;
 					case FLOOR:
-						number[n - 1] = floor(number[n - 1]);
+						stackPush(&stack, floor(num));
 						break;
 					case CEIL:
-						number[n - 1] = ceil(number[n - 1]);
+						stackPush(&stack, ceil(num));
 						break;
 					case ABS:
-						number[n - 1] = fabs(number[n - 1]);
+						stackPush(&stack, fabs(num));
 						break;
 					case EXP:
-						number[n - 1] = exp(number[n - 1]);
+						stackPush(&stack, exp(num));
 						break;
 					case SIN:
-						number[n - 1] = sin(number[n - 1]);
+						stackPush(&stack, sin(num));
 						break;
 					case COS:
-						number[n - 1] = cos(number[n - 1]);
+						stackPush(&stack, cos(num));
 						break;
 					case TAN:
-						number[n - 1] = tan(number[n - 1]);
+						stackPush(&stack, tan(num));
 						break;
 					case LN:
-						if(number[n - 1] > 0)
-							number[n - 1] = log(number[n - 1]);
-						else {
+						if(num <= 0) {
 							puts("[Error]: x out of (x > 0) in ln(x)\n");
 							return false;
 						}
+						stackPush(&stack, log(num));
 						break;
 				}
 				break;
 		}
 	}
 	free(s);
-	while(n > 1) {
-		number[n - 2] *= number[n - 1];
-		n--;
-	}
-	*result = *number;
-	free(number);
+	while(stack.n > 1)
+		stackPush(&stack, stackPop(&stack) * stackPop(&stack));
+	*result = stackPop(&stack);
 	return true;
+}
+
+void stackInit(Stack* s) {
+	s->size = 50u;
+	s->n = 0u;
+	s->stack = (double*)malloc(sizeof(double) * s->size);
+	if(s->stack == NULL)
+		assert(0);
+}
+
+void stackPush(Stack* s, double value) {
+	if(s->n == s->size) {
+		s->size += 25u;
+		s->stack = (double*)realloc(s->stack, sizeof(double) * s->size);
+	}
+	s->stack[s->n++] = value;
+}
+
+double stackPop(Stack* s) {
+	double value = 0;
+	if(s->n > 0)
+		value = s->stack[--s->n];
+	else
+		puts("[Error]: stack is empty and can't pop\n");
+	return value;
 }
