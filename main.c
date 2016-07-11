@@ -7,6 +7,13 @@
 
 /*#define DEBUG*/
 
+/* Calculator *
+ * Commands   *
+ * Constant   *
+ * Operators  *
+ * Funtions   *
+ */
+
 double Ans = 0;
 
 int main(int argc, char *argv[]) {
