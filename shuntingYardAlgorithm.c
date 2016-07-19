@@ -2,15 +2,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 #include "stack.h"
 #include "input.h"
 #include "shuntingYardAlgorithm.h"
+
+Constant constant[] = {
+	{"pi", &pi},
+	{"ans", &ans},
+};
 
 inline bool isOperator(char c) {
 	return (c == '^' || c == '*' || c == '/' || c == '%' || c == '+' || c == '-');
 }
 
-int isConstant(char* ptr) {
+int isConstant(const char* ptr) {
 	int i, number = sizeof(constant) / sizeof(Constant);
 	int ret = 0;
 	for(i = 0; i < number; i++) {
@@ -45,7 +51,7 @@ unsigned int getPriority(char c) {
 	return priority;
 }
 
-charType getType(char* s, bool sign) {
+charType getType(const char* s, bool sign) {
 	charType result;
 	char *ptr, ch = *s;
 	strtod(s, &ptr);
@@ -66,14 +72,13 @@ charType getType(char* s, bool sign) {
 	return result;
 }
 
-char* shuntingYardAlgorithm(const char *input) {
+char* shuntingYardAlgorithm(const char* inptr) {
 	unsigned int outputSize = 100u, stackSize = 50u, blockSize = 50u;
 	unsigned int n1 = 0, n2 = 0, overNumber = 0;
 	char *stack  = (char*)malloc(stackSize * sizeof(char)),
 		*output = (char*)malloc(outputSize * sizeof(char));
 	if(stack == NULL || output == NULL)
 		assert(0);
-	const char *inptr = input;
 	bool digitSign = false;
 	char inChar, ch;
 	output[n1++] = ' ';
@@ -108,6 +113,7 @@ char* shuntingYardAlgorithm(const char *input) {
 				number = strlen(constant[isConstant(inptr) - 1].str);
 				while(number--)
 					output[n1++] = *inptr++;
+				output[n1++] = ' ';
 				break;
 			case OPERATOR:
 				digitSign = false;
@@ -195,7 +201,7 @@ bool calculate(char* s, double* result) {
 				stackPush(&stack, atof(buffer));
 				break;
 			case CONSTANT:
-				stackPush(&stack, constant[isConstant(buffer) - 1].num);
+				stackPush(&stack, *(constant[isConstant(buffer) - 1].num));
 				break;
 			case OPERATOR:
 				if(stack.n < 2) {

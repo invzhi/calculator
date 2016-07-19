@@ -7,16 +7,12 @@
 #endif
 
 extern double ans;
+extern double pi;
 
 typedef struct {
-	char str[];
-	double num;
+	char* str;
+	double* num;
 } Constant;
-
-const Constant constant[] = {
-	{"pi", 3.14159265359},
-	{"ans", ans},
-}
 
 typedef enum {
 	DIGIT,
@@ -29,8 +25,8 @@ typedef enum {
 } charType;
 
 inline bool isOperator(char c);
-int isConstant(char* ptr);
-charType getType(char* c, char sign);
+int isConstant(const char* ptr);
+charType getType(const char* c, char sign);
 unsigned int getPriority(char c);
-char* shuntingYardAlgorithm(const char *input);
+char* shuntingYardAlgorithm(const char* inptr);
 bool calculate(char* s, double* result);

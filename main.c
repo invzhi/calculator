@@ -7,14 +7,15 @@
 
 #define DEBUG
 
-/* Calculator *
- * Commands   *
- * Constant   *
- * Operators  *
- * Funtions   *
- */
+void interfaceInit(void) {
+	system("color F0");
+	system("title --------------------Welcome to use the calculator program--------------------");
+	printf("Please enter the expression or command with English characters:\t\t");
+	puts  ("Or you can enter \"help\" to know more.\n");
+}
 
 double ans = 0;
+double pi = 3.14159265359; 
 
 int main(int argc, char *argv[]) {
 	interfaceInit();
@@ -22,7 +23,7 @@ int main(int argc, char *argv[]) {
 	char *input = NULL, *reversePolishNotation = NULL;
 	while(strcmp(input = getInfixNotation(), "quit") != 0) {
 		#ifdef DEBUG
-		printf("input:%s\n", input);
+		printf("input: %s\n", input);
 		#endif
 		if(!commandCheck(input) && (reversePolishNotation = shuntingYardAlgorithm(input))) {
 			#ifdef DEBUG
@@ -35,11 +36,4 @@ int main(int argc, char *argv[]) {
 	}
 	free(input);
 	return EXIT_SUCCESS;
-}
-
-void interfaceInit(void) {
-	system("color F0");
-	system("title --------------------Welcome to use the calculator program--------------------");
-	printf("Please enter the expression or command with English characters:\t\t");
-	puts  ("Or you can enter \"help\" to know more.\n");
 }
