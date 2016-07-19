@@ -5,7 +5,7 @@
 #include "commandCheck.h"
 #include "shuntingYardAlgorithm.h"
 
-/*#define DEBUG*/
+#define DEBUG
 
 /* Calculator *
  * Commands   *
@@ -14,7 +14,7 @@
  * Funtions   *
  */
 
-double Ans = 0;
+double ans = 0;
 
 int main(int argc, char *argv[]) {
 	interfaceInit();
@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
 			printf("reversePolishNotation:%s\n", reversePolishNotation);
 			#endif
 			if(calculate(reversePolishNotation, &result))
-				printf("= %g\n\n", Ans = result);
+				printf("= %g\n\n", ans = result);
 		}
 		free(input);
 	}

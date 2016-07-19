@@ -14,15 +14,6 @@ inline bool isFunction(char c) {
 	return (c >= 'A' && c < FUNCTION_END);
 }
 
-void replaceNumber(char* a, double insert, const char* b) {
-	char* b_ = (char*)malloc((strlen(b) + 1) * sizeof(char));
-	if(b_ == NULL)
-		assert(0);
-	strcpy(b_, b);
-	sprintf(a, "(%lf)%s", insert, b_);
-	free(b_);
-}
-
 bool functionInit(char* s) {
 	char* ptr;
 	while(ptr = strstr(s, "arcsin"))
@@ -77,19 +68,6 @@ bool replaceFuntion(char* s, function c, int functionLength) {
 	return ret;
 }
 
-bool inputInit(char* s) {
-	char* ptr = s;
-	if(ptr = strstr(s, "()" )) {
-		puts("[Error]: empty between '(' and ')'\n");
-		return false;
-	}
-	while(ptr = strstr(s, "pi"))
-		replaceNumber(ptr, acos(-1.0), ptr + 2);
-	while(ptr = strstr(s, "ans"))
-		replaceNumber(ptr, Ans, ptr + 3);
-	return functionInit(s);
-}
-
 char* getInfixNotation(void) {
 	unsigned int size = 100u, blockSize = 50u;
 	char* buffer = (char*)malloc(size * sizeof(char));
@@ -98,8 +76,8 @@ char* getInfixNotation(void) {
 	while(buffer != NULL && (c = getchar()) != EOF && c != '\n') {
 		if(isspace(c))
 			continue;
-		if(!isInput(c)) {
-			puts("[Error]: you can only enter characters with English\n");
+		if(!isInput(c) || c == ')' && buffer[n - 1] == '(') {
+			puts(isInput(c) ? "[Error]: empty between '(' and ')'\n" : "[Error]: you can only enter characters with English\n");
 			free(buffer);
 			fflush(stdin);
 			return getInfixNotation();
@@ -117,8 +95,8 @@ char* getInfixNotation(void) {
 		buffer = getInfixNotation();
 	} else {
 		buffer[n] = '\0';
-		buffer = (char*)realloc(buffer, (strlen(buffer) + 100) * sizeof(char));
-		if(!inputInit(buffer)) {
+		buffer = (char*)realloc(buffer, (n + 1) * sizeof(char));
+		if(!functionInit(buffer)) {
 			free(buffer);
 			buffer = getInfixNotation();
 		}

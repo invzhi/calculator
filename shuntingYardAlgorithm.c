@@ -10,6 +10,19 @@ inline bool isOperator(char c) {
 	return (c == '^' || c == '*' || c == '/' || c == '%' || c == '+' || c == '-');
 }
 
+int isConstant(char* ptr) {
+	int i, number = sizeof(constant) / sizeof(Constant);
+	int ret = 0;
+	for(i = 0; i < number; i++) {
+		int length = strlen(constant[i].str);
+		if(strncmp(ptr, constant[i].str, length) == 0) {
+			ret = i + 1;
+			break;
+		}
+	}
+	return ret;
+}
+
 unsigned int getPriority(char c) {
 	unsigned int priority;
 	switch(c) {
@@ -25,6 +38,9 @@ unsigned int getPriority(char c) {
 		case '-':
 			priority = 1u;
 			break;
+		default:
+			assert(0);
+			break;
 	}
 	return priority;
 }
@@ -35,6 +51,8 @@ charType getType(char* s, bool sign) {
 	strtod(s, &ptr);
 	if(ptr > s && !sign)
 		result = DIGIT;
+	else if(isConstant(ptr))
+		result = CONSTANT;
 	else if(isOperator(ch))
 		result = OPERATOR;
 	else if(isFunction(ch))
@@ -74,15 +92,22 @@ char* shuntingYardAlgorithm(const char *input) {
 		}
 		char* ptr;
 		bool match = false;
+		int number;
 		switch(getType(inptr, digitSign)) {
 			case DIGIT:
 				digitSign = true;
 				strtod(inptr, &ptr);
-				if(ptr - inptr > 8)
+				if(ptr - inptr > 7)
 					overNumber++;
 				while(inptr < ptr)
 					output[n1++] = *inptr++;
 				output[n1++] = ' ';
+				break;
+			case CONSTANT:
+				digitSign = true;
+				number = strlen(constant[isConstant(inptr) - 1].str);
+				while(number--)
+					output[n1++] = *inptr++;
 				break;
 			case OPERATOR:
 				digitSign = false;
@@ -164,9 +189,13 @@ bool calculate(char* s, double* result) {
 	while(space = strchr(space, ' ')) {
 		space++;
 		sscanf(space, "%s", buffer);
+		int number;
 		switch(getType(buffer, false)) {
 			case DIGIT:
 				stackPush(&stack, atof(buffer));
+				break;
+			case CONSTANT:
+				stackPush(&stack, constant[isConstant(buffer) - 1].num);
 				break;
 			case OPERATOR:
 				if(stack.n < 2) {
