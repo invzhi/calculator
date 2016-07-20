@@ -6,6 +6,20 @@
 #include <assert.h>
 #include "input.h"
 
+char* functionName[] = {
+	"arcsin",
+	"arccos",
+	"arctan",
+	"floor",
+	"ceil",
+	"abs",
+	"exp",
+	"sin",
+	"cos",
+	"tan",
+	"ln",
+};
+
 inline bool isInput(char c) {
 	return (c >= ' ' && c <= '~');
 }
@@ -16,56 +30,22 @@ inline bool isFunction(char c) {
 
 bool functionInit(char* s) {
 	char* ptr;
-	while(ptr = strstr(s, "arcsin"))
-		if(!replaceFuntion(ptr, ARCSIN, 6))
-			return false;
-	while(ptr = strstr(s, "arccos"))
-		if(!replaceFuntion(ptr, ARCCOS, 6))
-			return false;
-	while(ptr = strstr(s, "arctan"))
-		if(!replaceFuntion(ptr, ARCTAN, 6))
-			return false;
-	while(ptr = strstr(s, "floor"))
-		if(!replaceFuntion(ptr, FLOOR, 5))
-			return false;
-	while(ptr = strstr(s, "ceil"))
-		if(!replaceFuntion(ptr, CEIL, 4))
-			return false;
-	while(ptr = strstr(s, "abs"))
-		if(!replaceFuntion(ptr, ABS, 3))
-			return false;
-	while(ptr = strstr(s, "exp"))
-		if(!replaceFuntion(ptr, EXP, 3))
-			return false;
-	while(ptr = strstr(s, "sin"))
-		if(!replaceFuntion(ptr, SIN, 3))
-			return false;
-	while(ptr = strstr(s, "cos"))
-		if(!replaceFuntion(ptr, COS, 3))
-			return false;
-	while(ptr = strstr(s, "tan"))
-		if(!replaceFuntion(ptr, TAN, 3))
-			return false;
-	while(ptr = strstr(s, "ln"))
-		if(!replaceFuntion(ptr, LN, 2))
-			return false;
-	return true;
-}
-
-bool replaceFuntion(char* s, function c, int functionLength) {
-	bool ret;
 	char ch;
-	if(*(s + functionLength) == '(') {
-		*s++ = c;
-		while(ch = *(s + functionLength - 1))
-			*s++ = ch;
-		*s = ch;
-		ret = true;
-	} else {
-		printf("[Error]: no '(' after function \"%.*s\"\n\n", functionLength, s);
-		ret = false;
+	int i;
+	for(i = 0; i < FUNCTION_END - 'A'; i++) {
+		int length = strlen(functionName[i]);
+		while(ptr = strstr(s, functionName[i])) {
+			if(*(ptr + length) != '(') {
+				printf("[Error]: no '(' after function \"%s\"\n\n", functionName[i]);
+				return false;
+			}
+			*ptr++ = 'A' + i;
+			while(ch = *(ptr + length - 1))
+				*ptr++ = ch;
+			*ptr = ch;
+		}
 	}
-	return ret;
+	return true;
 }
 
 char* getInfixNotation(void) {

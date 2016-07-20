@@ -25,4 +25,3 @@ inline bool isInput(char c);
 inline bool isFunction(char c);
 char* getInfixNotation(void);
 bool functionInit(char* s);
-bool replaceFuntion(char* s, function c, int functionLength);
