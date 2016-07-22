@@ -5,7 +5,7 @@
 #include "commandCheck.h"
 #include "shuntingYardAlgorithm.h"
 
-#define DEBUG
+/*#define DEBUG*/
 
 void interfaceInit(void) {
 	system("color F0");
